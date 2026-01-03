@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Verse App</title>
+    <style>
+        /* Minimalist "Apple-Style" UI */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            display: flex; align-items: center; justify-content: center; 
+            min-height: 100vh; margin: 0; background-color: #ffffff; color: #1d1d1f;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { 
+            text-align: center; max-width: 550px; width: 85%; padding: 40px;
+        }
+
+        #date-label {
+            font-size: 13px; font-weight: 600; color: #86868b;
+            text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 32px;
+        }
+
+        #verse-text { 
+            font-size: 26px; line-height: 1.45; font-weight: 500;
+            margin-bottom: 20px; color: #1d1d1f; letter-spacing: -0.01em;
+            transition: opacity 0.8s ease;
+        }
+
+        #verse-ref { 
+            font-size: 16px; font-weight: 600; color: #eb5757; /* YouVersion Red */
+            transition: opacity 0.8s ease;
+        }
+
+        /* Loading Animation */
+        .loader {
+            display: none; width: 24px; height: 24px; border: 2px solid #f3f3f3;
+            border-top: 2px solid #86868b; border-radius: 50%;
+            animation: spin 1s linear infinite; margin: 0 auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="date-label"></div>
+        <div id="loader" class="loader"></div>
+        <div id="content">
+            <div id="verse-text"></div>
+            <div id="verse-ref"></div>
+        </div>
+    </div>
+
+    <script>
+        async function loadDailyVerse() {
+            const textEl = document.getElementById('verse-text');
+            const refEl = document.getElementById('verse-ref');
+            const dateEl = document.getElementById('date-label');
+            const loader = document.getElementById('loader');
+
+            // 1. Logic for "Live" vs "Fixed Date" (For Notion)
+            const urlParams = new URLSearchParams(window.location.search);
+            const dateParam = urlParams.get('date');
+            const targetDate = dateParam ? new Date(dateParam) : new Date();
+
+            // 2. Format Date Display
+            dateEl.innerText = targetDate.toLocaleDateString('en-US', { 
+                weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
+            });
+
+            // 3. UI State
+            loader.style.display = 'block';
+            textEl.style.opacity = '0';
+            refEl.style.opacity = '0';
+
+            try {
+                // Fetch the official Daily Verse
+                // Note: Most free APIs provide the CURRENT daily verse.
+                const response = await fetch('https://beta.ourmanna.com/api/v1/get?format=json&order=daily');
+                const data = await response.json();
+                
+                // Clean punctuation
+                let cleanText = data.verse.details.text.trim();
+                cleanText = cleanText.replace(/^["']|["']$/g, ''); 
+                
+                textEl.innerText = `“${cleanText}”`;
+                refEl.innerText = data.verse.details.reference;
+
+            } catch (error) {
+                textEl.innerText = "The connection to the Word was interrupted.";
+                refEl.innerText = "Please refresh.";
+            } finally {
+                loader.style.display = 'none';
+                textEl.style.opacity = '1';
+                refEl.style.opacity = '1';
+            }
+        }
+
+        window.onload = loadDailyVerse;
+    </script>
+</body>
+</html>
