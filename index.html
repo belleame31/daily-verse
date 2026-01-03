@@ -3,102 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Verse App</title>
+    <title>Daily Verse</title>
     <style>
-        /* Minimalist "Apple-Style" UI */
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            font-family: -apple-system, system-ui, sans-serif; 
             display: flex; align-items: center; justify-content: center; 
             min-height: 100vh; margin: 0; background-color: #ffffff; color: #1d1d1f;
-            -webkit-font-smoothing: antialiased;
         }
-
-        .container { 
-            text-align: center; max-width: 550px; width: 85%; padding: 40px;
-        }
-
-        #date-label {
-            font-size: 13px; font-weight: 600; color: #86868b;
-            text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 32px;
-        }
-
-        #verse-text { 
-            font-size: 26px; line-height: 1.45; font-weight: 500;
-            margin-bottom: 20px; color: #1d1d1f; letter-spacing: -0.01em;
-            transition: opacity 0.8s ease;
-        }
-
-        #verse-ref { 
-            font-size: 16px; font-weight: 600; color: #eb5757; /* YouVersion Red */
-            transition: opacity 0.8s ease;
-        }
-
-        /* Loading Animation */
-        .loader {
-            display: none; width: 24px; height: 24px; border: 2px solid #f3f3f3;
-            border-top: 2px solid #86868b; border-radius: 50%;
-            animation: spin 1s linear infinite; margin: 0 auto;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .container { text-align: center; max-width: 550px; width: 85%; padding: 40px; }
+        #date-label { font-size: 13px; font-weight: 600; color: #86868b; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 32px; }
+        #verse-text { font-size: 26px; line-height: 1.45; font-weight: 500; margin-bottom: 20px; color: #1d1d1f; letter-spacing: -0.01em; }
+        #verse-ref { font-size: 16px; font-weight: 600; color: #eb5757; }
     </style>
 </head>
 <body>
-
     <div class="container">
         <div id="date-label"></div>
-        <div id="loader" class="loader"></div>
-        <div id="content">
-            <div id="verse-text"></div>
-            <div id="verse-ref"></div>
-        </div>
+        <div id="verse-text"></div>
+        <div id="verse-ref"></div>
     </div>
 
     <script>
-        async function loadDailyVerse() {
-            const textEl = document.getElementById('verse-text');
-            const refEl = document.getElementById('verse-ref');
-            const dateEl = document.getElementById('date-label');
-            const loader = document.getElementById('loader');
+        // This list acts as your database. 
+        // The app will pick a verse based on the day of the year.
+        const verseList = [
+            { t: "In the beginning, God created the heavens and the earth.", r: "Genesis 1:1" },
+            { t: "The Lord is my shepherd; I shall not want.", r: "Psalm 23:1" },
+            { t: "For I know the plans I have for you, declares the Lord.", r: "Jeremiah 29:11" },
+            { t: "I can do all things through Christ who strengthens me.", r: "Philippians 4:13" },
+            { t: "Trust in the Lord with all your heart.", r: "Proverbs 3:5" },
+            { t: "But seek first the kingdom of God and his righteousness.", r: "Matthew 6:33" },
+            { t: "Be strong and courageous. Do not be afraid.", r: "Joshua 1:9" }
+            // You can add up to 365 verses here!
+        ];
 
-            // 1. Logic for "Live" vs "Fixed Date" (For Notion)
+        function loadVerse() {
             const urlParams = new URLSearchParams(window.location.search);
             const dateParam = urlParams.get('date');
             const targetDate = dateParam ? new Date(dateParam) : new Date();
 
-            // 2. Format Date Display
-            dateEl.innerText = targetDate.toLocaleDateString('en-US', { 
+            // 1. Display the Date
+            document.getElementById('date-label').innerText = targetDate.toLocaleDateString('en-US', { 
                 weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
             });
 
-            // 3. UI State
-            loader.style.display = 'block';
-            textEl.style.opacity = '0';
-            refEl.style.opacity = '0';
+            // 2. Math to pick a verse based on the day
+            // This ensures Jan 2 always gets one verse, and Jan 3 gets the next.
+            const start = new Date(targetDate.getFullYear(), 0, 0);
+            const diff = targetDate - start;
+            const oneDay = 1000 * 60 * 60 * 24;
+            const dayOfYear = Math.floor(diff / oneDay);
 
-            try {
-                // Fetch the official Daily Verse
-                // Note: Most free APIs provide the CURRENT daily verse.
-                const response = await fetch('https://beta.ourmanna.com/api/v1/get?format=json&order=daily');
-                const data = await response.json();
-                
-                // Clean punctuation
-                let cleanText = data.verse.details.text.trim();
-                cleanText = cleanText.replace(/^["']|["']$/g, ''); 
-                
-                textEl.innerText = `“${cleanText}”`;
-                refEl.innerText = data.verse.details.reference;
+            // Use "Modulo" (%) so if the list is short, it just starts over
+            const selectedVerse = verseList[dayOfYear % verseList.length];
 
-            } catch (error) {
-                textEl.innerText = "The connection to the Word was interrupted.";
-                refEl.innerText = "Please refresh.";
-            } finally {
-                loader.style.display = 'none';
-                textEl.style.opacity = '1';
-                refEl.style.opacity = '1';
-            }
+            document.getElementById('verse-text').innerText = `“${selectedVerse.t}”`;
+            document.getElementById('verse-ref').innerText = selectedVerse.r;
         }
 
-        window.onload = loadDailyVerse;
+        window.onload = loadVerse;
     </script>
 </body>
 </html>
